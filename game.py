@@ -57,7 +57,6 @@ class Game(object):
         print("\n########## Game Over ##########\n")
         self.board.display(step_time=step_time, total_time=total_time)
         self._print_winner(winner=winner, diff=diff)
-            
         return winner, diff
 
     def game_over(self):
