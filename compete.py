@@ -34,8 +34,10 @@ def calc(player1, player2, winners, diffs):
 if __name__ == '__main__':
     random.seed(0)
     players = {
-        'RandomPlayer': RandomPlayer,
-        'AlphaBetaPlayer' : AlphaBetaPlayer,
+        'Random': RandomPlayer,
+        'AlphaBeta' : AlphaBetaPlayer,
+        'GPT-4': GPTPlayer,
+        'MCTS': MCTSPlayer,
     }
     for player1 in players:
         for player2 in players:

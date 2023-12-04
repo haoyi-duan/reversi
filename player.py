@@ -3,7 +3,8 @@ import random
 import time
 import numpy as np
 import openai
-openai.api_key = "open_ai.key"
+import os
+openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
 class BasePlayer():
