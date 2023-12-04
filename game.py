@@ -1,4 +1,4 @@
-from player import HumanPlayer, RandomPlayer, GPTPlayer, AlphaBetaPlayer
+from player import *
 from board import Board
 import datetime
 from copy import deepcopy
@@ -91,6 +91,6 @@ class Game(object):
 
 if __name__ == '__main__':
     black_player = RandomPlayer('X')
-    white_player = AlphaBetaPlayer('O')
+    white_player = MonteCarloPlayer('O',num_simulation=100)
     game = Game(black_player=black_player, white_player=white_player)
     game.run()

@@ -1,9 +1,12 @@
 from copy import deepcopy
+from collections import defaultdict
 import random
 import time
 import numpy as np
 import openai
-openai.api_key = "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"
+from board import Board
+from collections import defaultdict
+openai.api_key = "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"
 
 
 class BasePlayer():
@@ -66,6 +69,8 @@ class GPTPlayer(BasePlayer):
         super().get_move()
         legal_actions = list(board.get_legal_actions(self.color))
         colors = {'X': "black", 'O': "white"}
+        legal_message = ', '.join(legal_actions)
+        content = f"Your color is '{self.color}': {colors[self.color]}. Please make your move by specifying a column (A-H) and a row (1-8), like 'D3' for column D, row 3.Your response should be only two letters. Your actions must be chosen from the following: "+legal_message+"."
         messages = [{"role": "system", "content": "You are reversi chess game player. Now you are going to play reversi with me. Black pieces are denoted as 'X', white pieces are denoted as 'O', you can place your move at '.'. Assume current board is:\n" + \
                     " " + " ".join(list("ABCDEFGH")) + "\n" + \
                     str(1) + ' ' + ' '.join(board[0]) + "\n" + \
@@ -76,39 +81,19 @@ class GPTPlayer(BasePlayer):
                     str(6) + ' ' + ' '.join(board[5]) + "\n" + \
                     str(7) + ' ' + ' '.join(board[6]) + "\n" + \
                     str(8) + ' ' + ' '.join(board[7])}, \
-                    {"role": "user", "content": "If you are '{}': {}, Please tell me your move in terms of column (A-H) and row (1-8), like 'D3' for column D, row 3.".format(self.color, colors[self.color])}]
+                    {"role": "user", "content": content}]
         while True:
             try:
                 response = openai.ChatCompletion.create(
                     model=self.player,
                     messages=messages,
+                    temperature=1
                 ) 
                 response = response["choices"][0]["message"]["content"]
-                try:
-                    print(response)
-                    output = response.strip(" ").strip(".")
-                    for coord in self.candidates:
-                        if coord in output:
-                            output = coord
-                    assert output[0] in list("ABCDEFGH"), output[1] in list("12345678")
-                except AssertionError as e:
-                    assistant_message = {"role": "assistant", "content": response}
-                    user_message = {"role": "user", "content": "The output format is not correct. Please try again, tell me your move in terms of column (A-H) and row (1-8), like 'D3' for column D, row 3:\n"}
-                    messages.append(assistant_message)
-                    messages.append(user_message)
-                    print("The output format is not correct. chatGPT4, let's try again!", str(e))
+                if response not in legal_actions:
                     continue
                 else:
-                    if output not in legal_actions:
-                        assistant_message = {"role": "assistant", "content": response}
-                        op_color = 'O' if self.color =='X' else 'X'
-                        user_message = {"role": "user", "content": "The output action is not legal. Please try again, tell me your move in terms of column (A-H) and row (1-8), like 'D3' for column D, row 3. After the move, some of the {}: {} pieces will be flipped. For example legal actions including {}\n".format(op_color, colors[op_color], legal_actions)}
-                        messages.append(assistant_message)
-                        messages.append(user_message)
-                        print("The output action is not legal. chatGPT4, let's try again!")
-                        continue
-                    else:
-                        break
+                    break
             except openai.APIError as e:
                 #Handle API error here, e.g. retry or log
                 print(f"OpenAI API returned an API Error: {e}")
@@ -116,7 +101,7 @@ class GPTPlayer(BasePlayer):
                 time.sleep(1)
                 continue
 
-        return output
+        return response
 
 class AlphaBetaPlayer(BasePlayer):
     def __init__(self, color) -> None:
@@ -197,7 +182,50 @@ class AlphaBetaPlayer(BasePlayer):
 
         return action
         
-
-        
-
-        
+class MonteCarloPlayer(BasePlayer):
+    def __init__(self, color,num_simulation=1000,C=1.41) -> None:
+        super().__init__(color, "MonteCarlo")
+        self.num_simulation = num_simulation
+        self.C=C
+    def uct_value(self,action,action_plays,action_wins):
+        total_plays=sum(action_plays.values())
+        if action_plays[action]==0:
+            return float("inf")
+        win_rate=action_wins[action]/action_plays[action]
+        return win_rate+self.C*np.sqrt(np.log(total_plays)/action_plays[action])
+    def get_move(self, board):
+        super().get_move()
+        legal_actions=list(board.get_legal_actions(self.color))
+        if not legal_actions:
+            return None
+        else:
+            action_wins=defaultdict(int)
+            action_plays=defaultdict(int)
+            for _ in range(self.num_simulation):
+                # choose an action
+                best_action=max(legal_actions,key=lambda a:self.uct_value(a,action_plays,action_wins))
+                #for action in legal_actions:
+                virtual_board=deepcopy(board)
+                win=self.simulate(virtual_board,best_action)
+                action_wins[best_action]+=win
+                action_plays[best_action]+=1
+            return max(legal_actions, key=lambda a: action_wins[a] / action_plays[a] if action_plays[a] > 0 else 0)
+    def simulate(self,board,action):
+        current_color=self.color
+        board.move(action,current_color)
+        while True:
+            current_color="O" if current_color=="X" else "X"
+            legal_actions=list(board.get_legal_actions(current_color))
+            if len(legal_actions) == 0:
+                list_X = list(board.get_legal_actions('X'))
+                list_O = list(board.get_legal_actions('O'))
+                if len(list_X) == 0 and len(list_O) == 0:
+                    winner, diff = board.get_winner()
+                    return 1 if winner==(0 if self.color=="X" else 1) else 0
+            else:
+                board.move(random.choice(legal_actions),current_color)
+            
+if __name__ == '__main__':
+    black_player = GPTPlayer('X')
+    board = Board()
+    black_player.get_move(board)
