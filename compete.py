@@ -4,16 +4,21 @@ import os
 from game import Game
 from player import *
 
-def match(black_player, white_player, num_simulations=1):
+def match(player1, player2, num_simulations=1):
+    black_player = players[player1]('X')
+    white_player = players[player2]('O')
     winners = []
     diffs = []
     sys.stdout = open(os.devnull, 'w')
+    logfile = open(f'{player1}_{player2}.txt', 'w')
     for _ in range(num_simulations):
         game = Game(black_player=black_player, white_player=white_player)
         winner, diff = game.run()
+        logfile.write(f'{winner},{diff}\n')
         winners.append(winner)
         diffs.append(diff)
     sys.stdout = sys.__stdout__
+    logfile.close()
     return winners, diffs
 
 def calc(player1, player2, winners, diffs):
@@ -36,16 +41,14 @@ if __name__ == '__main__':
     players = {
         'Random': RandomPlayer,
         'AlphaBeta' : AlphaBetaPlayer,
-        'GPT-4': GPTPlayer,
-        'MCTS': MCTSPlayer,
+        # 'GPT-4': GPTPlayer,
+        'MCTS': MonteCarloPlayer,
     }
     for player1 in players:
         for player2 in players:
             if player1 == player2:
                 continue
-            black_player = players[player1]('X')
-            white_player = players[player2]('O')
-            winners, diffs = match(black_player, white_player, 3)
+            winners, diffs = match(player1, player2, 3)
             result = calc(player1, player2, winners, diffs)
             print("{},{},{:.2f},{:.2f}".format(
                 player1, player2, result[0], result[1]))

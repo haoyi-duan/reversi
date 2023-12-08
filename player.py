@@ -4,7 +4,8 @@ import time
 import numpy as np
 import openai
 import os
-openai.api_key = os.environ["OPENAI_API_KEY"]
+from collections import defaultdict
+openai.api_key = os.environ.get("OPENAI_API_KEY", "")
 
 
 class BasePlayer():
@@ -57,7 +58,7 @@ class RandomPlayer(BasePlayer):
             return random.choice(candidates)
 
 
-class GPTPlayer(BasePlayer):
+class GPTPlayer_old(BasePlayer):
     def __init__(self, color, model='gpt-4') -> None:
         assert model in ['gpt-4', 'gpt-3.5-turbo'], "GPT version unknown, choose between ['gpt-4', 'gpt-3.5-turbo']!"
         super().__init__(color, model)
@@ -118,6 +119,50 @@ class GPTPlayer(BasePlayer):
                 continue
 
         return output
+
+class GPTPlayer(BasePlayer):
+    def __init__(self, color, model='gpt-4') -> None:
+        assert model in ['gpt-4', 'gpt-3.5-turbo'], "GPT version unknown, choose between ['gpt-4', 'gpt-3.5-turbo']!"
+        super().__init__(color, model)
+        self.candidates = [i+j for i in list("ABCDEFGH") for j in list("12345678")]
+
+    def get_move(self, board):
+        super().get_move()
+        legal_actions = list(board.get_legal_actions(self.color))
+        colors = {'X': "black", 'O': "white"}
+        legal_message = ', '.join(legal_actions)
+        content = f"Your color is '{self.color}': {colors[self.color]}. Please make your move by specifying a column (A-H) and a row (1-8), like 'D3' for column D, row 3.Your response should be only two letters. Your actions must be chosen from the following: "+legal_message+"."
+        messages = [{"role": "system", "content": "You are reversi chess game player. Now you are going to play reversi with me. Black pieces are denoted as 'X', white pieces are denoted as 'O', you can place your move at '.'. Assume current board is:\n" + \
+                    " " + " ".join(list("ABCDEFGH")) + "\n" + \
+                    str(1) + ' ' + ' '.join(board[0]) + "\n" + \
+                    str(2) + ' ' + ' '.join(board[1]) + "\n" + \
+                    str(3) + ' ' + ' '.join(board[2]) + "\n" + \
+                    str(4) + ' ' + ' '.join(board[3]) + "\n" + \
+                    str(5) + ' ' + ' '.join(board[4]) + "\n" + \
+                    str(6) + ' ' + ' '.join(board[5]) + "\n" + \
+                    str(7) + ' ' + ' '.join(board[6]) + "\n" + \
+                    str(8) + ' ' + ' '.join(board[7])}, \
+                    {"role": "user", "content": content}]
+        while True:
+            try:
+                response = openai.ChatCompletion.create(
+                    model=self.player,
+                    messages=messages,
+                    temperature=1
+                ) 
+                response = response["choices"][0]["message"]["content"]
+                if response not in legal_actions:
+                    continue
+                else:
+                    break
+            except openai.APIError as e:
+                #Handle API error here, e.g. retry or log
+                print(f"OpenAI API returned an API Error: {e}")
+                print("Wait for a second and ask chatGPT4 again!")
+                time.sleep(1)
+                continue
+
+        return response
 
 class AlphaBetaPlayer(BasePlayer):
     def __init__(self, color) -> None:
@@ -198,7 +243,51 @@ class AlphaBetaPlayer(BasePlayer):
 
         return action
         
-
+class MonteCarloPlayer(BasePlayer):
+    def __init__(self, color, num_simulation=100, C=1.41) -> None:
+        super().__init__(color, "MonteCarlo")
+        self.num_simulation = num_simulation
+        self.C=C
+    
+    def uct_value(self, action, action_plays, action_wins):
+        total_plays=sum(action_plays.values())
+        if action_plays[action]==0:
+            return float("inf")
+        win_rate=action_wins[action]/action_plays[action]
+        return win_rate+self.C*np.sqrt(np.log(total_plays)/action_plays[action])
+    
+    def get_move(self, board):
+        super().get_move()
+        legal_actions=list(board.get_legal_actions(self.color))
+        if not legal_actions:
+            return None
+        else:
+            action_wins=defaultdict(int)
+            action_plays=defaultdict(int)
+            for _ in range(self.num_simulation):
+                # choose an action
+                best_action=max(legal_actions,key=lambda a:self.uct_value(a,action_plays,action_wins))
+                #for action in legal_actions:
+                virtual_board=deepcopy(board)
+                win=self.simulate(virtual_board,best_action)
+                action_wins[best_action]+=win
+                action_plays[best_action]+=1
+            return max(legal_actions, key=lambda a: action_wins[a] / action_plays[a] if action_plays[a] > 0 else 0)
+    
+    def simulate(self, board, action):
+        current_color=self.color
+        board.move(action,current_color)
+        while True:
+            current_color="O" if current_color=="X" else "X"
+            legal_actions=list(board.get_legal_actions(current_color))
+            if len(legal_actions) == 0:
+                list_X = list(board.get_legal_actions('X'))
+                list_O = list(board.get_legal_actions('O'))
+                if len(list_X) == 0 and len(list_O) == 0:
+                    winner, diff = board.get_winner()
+                    return 1 if winner==(0 if self.color=="X" else 1) else 0
+            else:
+                board.move(random.choice(legal_actions),current_color)
         
 
         
