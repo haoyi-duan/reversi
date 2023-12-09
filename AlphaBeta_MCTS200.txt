@@ -1,5 +1,8 @@
+Alpha,38
+
+White,12
+
 MCTS,18
-Draw,0
-MCTS,18
+
 black 2.89s
 MCTS 0.53s

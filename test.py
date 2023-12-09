@@ -5,7 +5,7 @@ import datetime
 from copy import deepcopy
 
 black_player = AlphaBetaPlayer('X')
-white_player = MonteCarloPlayer('O',num_simulation=200)
+white_player = MonteCarloPlayer('O',num_simulation=400)
 black_win=0
 white_win=0
 draw=0

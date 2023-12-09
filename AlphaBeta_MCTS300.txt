@@ -1,0 +1,8 @@
+MCTS,18
+
+Draw,0
+
+MCTS,18
+
+black 4.71s
+MCTS 0.86s
