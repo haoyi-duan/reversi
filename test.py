@@ -11,16 +11,16 @@ white_win=0
 draw=0
 total_time = {"X": 0, "O": 0}
 move_cnt={"X": 0, "O": 0}
-for i in range(0,6):
+for i in range(0,3):
     game = Game(black_player=black_player, white_player=white_player)
     game.run()
     total_time["X"]+=game.total_time["X"]
     move_cnt["X"]+=game.move_cnt["X"]
     total_time["O"]+=game.total_time["O"]
     move_cnt["O"]+=game.move_cnt["O"]
-    if game.board.get_winner()==0:
+    if game.board.get_winner()[0]==0:
         black_win+=1
-    elif game.board.get_winner()==1:
+    elif game.board.get_winner()[0]==1:
         white_win+=1
     else:
         draw+=1
