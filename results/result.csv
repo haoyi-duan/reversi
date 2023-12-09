@@ -1,0 +1,6 @@
+Random,AlphaBeta,0.00,-30.00
+Random,MCTS,0.00,-34.67
+AlphaBeta,Random,100.00,24.00
+AlphaBeta,MCTS,33.33,-1.33
+MCTS,Random,100.00,14.00
+MCTS,AlphaBeta,0.00,-25.33
