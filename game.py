@@ -10,16 +10,16 @@ class Game(object):
         self.current_player = None
         self.black_player = black_player
         self.white_player = white_player
-
+        self.total_time = {"X": 0, "O": 0}
+        self.step_time = {"X": 0, "O": 0}
+        self.move_cnt= {"X": 0, "O": 0}
     def run(self):
-        total_time = {"X": 0, "O": 0}
-        step_time = {"X": 0, "O": 0}
         winner = None
         diff = -1
 
         # Run the Game
         print("\n########## Game Start ##########\n")
-        self.board.display(step_time=step_time, total_time=total_time)
+        #self.board.display(step_time=self.step_time, total_time=self.total_time)
 
         while True:
             self.current_player = self._switch_player()
@@ -44,18 +44,19 @@ class Game(object):
             if action is None:
                 continue
             else:
-                es_time = (end_time - start_time).seconds
+                es_time = (end_time - start_time).total_seconds()
                 self.board.move(action, color)
-                step_time[color] = es_time
-                total_time[color] += es_time
-            self.board.display(step_time=step_time, total_time=total_time)
+                self.step_time[color] = es_time
+                self.total_time[color] += es_time
+                self.move_cnt[color]+=1
+            #self.board.display(step_time=self.step_time, total_time=self.total_time)
 
             if self.game_over():
                 winner, diff = self.board.get_winner()
                 break
 
         print("\n########## Game Over ##########\n")
-        self.board.display(step_time=step_time, total_time=total_time)
+        #self.board.display(step_time=self.step_time, total_time=self.total_time)
         self._print_winner(winner=winner, diff=diff)
             
         return winner, diff
@@ -90,7 +91,7 @@ class Game(object):
         print(["Black wins!", "White wins!", "Draw!"][winner], "Diff: {}".format(diff))
 
 if __name__ == '__main__':
-    black_player = RandomPlayer('X')
-    white_player = MonteCarloPlayer('O',num_simulation=100)
+    black_player = AlphaBetaPlayer('X')
+    white_player = MonteCarloPlayer('O',num_simulation=200)
     game = Game(black_player=black_player, white_player=white_player)
     game.run()

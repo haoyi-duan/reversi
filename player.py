@@ -16,7 +16,8 @@ class BasePlayer():
         self.player = player
 
     def get_move(self):
-        print("Please wait for a while, {}-{} is thinking...".format(self.player, self.color))
+        #print("Please wait for a while, {}-{} is thinking...".format(self.player, self.color))
+        pass
 
 
 class HumanPlayer(BasePlayer):
@@ -229,3 +230,4 @@ if __name__ == '__main__':
     black_player = GPTPlayer('X')
     board = Board()
     black_player.get_move(board)
+    
